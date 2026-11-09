@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ORAM">
+<meta name="theme-color" content="#07070F">
+<title>ORAM Remote</title>
+<style>
+:root{--bg:#07070F;--s1:#0B0B18;--s2:#0F0F20;--acc:#00C4A8;--ice:#60A5FA;--a2:#1840B8;--coral:#e0607a;--t1:rgba(235,235,250,.92);--t2:rgba(220,220,240,.55);--t3:rgba(220,220,240,.32);--rule:rgba(255,255,255,.07);
+--sans:"Space Grotesk",ui-sans-serif,-apple-system,"Helvetica Neue",sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--t1);font-family:var(--sans);overflow:hidden;overscroll-behavior:none;touch-action:none}
+body{background:radial-gradient(1200px 800px at 0% 0%,#10102a 0%,var(--bg) 60%)}
+#app{display:grid;grid-template-rows:46px 1fr auto;grid-template-areas:"head" "stage" "dock";height:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{grid-area:head;display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--s1);border-bottom:1px solid var(--rule);min-width:0}
+.logo{font-weight:700;letter-spacing:.32em;font-size:15px;white-space:nowrap}
+.logo small{color:var(--t3);font-weight:400;letter-spacing:.2em;font-size:9px;margin-left:8px}
+#name{font-family:var(--mono);font-size:13px;color:var(--acc);letter-spacing:.08em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meter{display:flex;align-items:center;gap:6px;font-size:8.5px;letter-spacing:.2em;color:var(--t3)}
+.meter i{display:block;width:70px;height:3px;background:rgba(255,255,255,.06);position:relative;overflow:hidden;border-radius:2px}
+.meter i b{position:absolute;left:0;top:0;bottom:0;background:var(--acc);width:0}
+#tiltPill{display:none;font:500 8.5px var(--sans);letter-spacing:.22em;color:var(--acc);border:1px solid var(--acc);border-radius:10px;padding:3px 8px;white-space:nowrap}
+#tiltPill.on{display:block}
+#dot{width:8px;height:8px;border-radius:50%;background:#444;flex:none}
+#dot.on{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+#dot.off{background:#c0503c}
+main{grid-area:stage;display:grid;grid-template-columns:1.15fr 1fr 0.95fr;min-height:0;min-width:0}
+section{position:relative;border-right:1px solid var(--rule);display:flex;flex-direction:column;min-height:0;min-width:0;padding:12px 14px}
+section:last-child{border-right:0}
+h2{margin:0 0 6px;font-size:9px;letter-spacing:.32em;font-weight:500;color:var(--t2);text-transform:uppercase}
+h2 span{color:var(--t3);margin-right:8px;font-family:var(--mono)}
+canvas{display:block;width:100%;flex:1 1 0;min-height:0;touch-action:none}
+.readout{font-family:var(--mono);font-size:11px;color:var(--t2);min-height:16px;text-align:center;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid{display:grid;gap:6px}
+#ctl{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:8px;flex:none}
+.mini label{display:flex;justify-content:space-between;font-size:8.5px;letter-spacing:.28em;color:var(--t3);margin-bottom:4px}
+.mini label b{font:400 9.5px var(--mono);letter-spacing:.03em;color:var(--t2)}
+.mini .track{height:26px}
+.mini .track i{position:absolute;top:3px;bottom:3px;border-radius:10px;background:var(--acc)}
+.mini .track u{position:absolute;top:-2px;bottom:-2px;width:1px;left:50%;background:rgba(255,255,255,.25)}
+.btn{background:var(--s2);border:1px solid rgba(255,255,255,.08);color:var(--t1);border-radius:8px;font:500 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;padding:0 4px;height:42px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.15;transition:background .12s,border-color .12s,box-shadow .12s;flex-direction:column;gap:2px;min-width:0}
+.btn small{font:400 7.5px var(--mono);letter-spacing:.06em;color:var(--t3);text-transform:uppercase}
+.btn:active,.btn.down{background:#13213a;border-color:var(--ice)}
+.btn.lit{border-color:var(--acc);color:var(--acc);box-shadow:0 0 12px rgba(0,196,168,.25) inset}
+.btn.lit small{color:var(--acc)}
+.btn.dim{opacity:.35}
+.btn.big{height:58px;font-size:11px}
+.btn.warn.down{background:#3a1820;border-color:var(--coral);color:#ffb3c1}
+.btn.flood.down{background:#0f3a33;border-color:var(--acc);color:#b8fff4}
+.btn.flash{border-color:var(--ice);box-shadow:0 0 18px rgba(96,165,250,.5)}
+.jarrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:0 0 auto}
+.jarwrap{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+.jar{height:52px;gap:3px;font-size:9px;letter-spacing:.14em}
+.jar em{font-style:normal;font-family:var(--mono);font-size:8.5px;letter-spacing:.04em;color:var(--t3);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jar.full{border-color:rgba(0,196,168,.5)}
+.jar.full em{color:var(--acc)}
+#jarpad{border:1px solid rgba(255,255,255,.08);border-radius:10px;background:var(--s1);flex:1 1 0;min-height:120px;width:100%}
+#tabs{display:none}
+footer{grid-area:dock;display:grid;grid-template-columns:repeat(8,1fr) 1.6fr;gap:8px;padding:10px 14px;border-top:1px solid var(--rule);background:var(--s1)}
+.fader{display:flex;flex-direction:column;justify-content:center;gap:4px}
+.fader label{font-size:8.5px;letter-spacing:.3em;color:var(--t3);display:flex;justify-content:space-between}
+.fader label b{font-family:var(--mono);font-weight:400;color:var(--t2);letter-spacing:.04em}
+.track{position:relative;height:30px;border-radius:15px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);touch-action:none}
+.track b{position:absolute;top:3px;bottom:3px;left:3px;border-radius:12px;background:linear-gradient(90deg,var(--a2),var(--ice))}
+#lost,#sheet{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(7,7,15,.86);z-index:10;padding:24px}
+#lost{font-size:12px;letter-spacing:.25em;color:var(--t2);text-align:center;line-height:2}
+#lost.show,#sheet.show{display:flex}
+.card{background:var(--s1);border:1px solid rgba(0,196,168,.35);border-radius:16px;padding:22px 20px 18px;max-width:420px;width:100%}
+.card h3{margin:0 0 10px;font-size:12px;letter-spacing:.3em;font-weight:600}
+.card p{margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--t2);-webkit-user-select:text;user-select:text}
+.card p b{color:var(--t1);font-weight:600}
+.card .row{display:flex;gap:8px;margin-top:16px}
+.card .row .btn{flex:1;height:44px}
+.card a.btn{text-decoration:none}
+@media (orientation:portrait){
+ main{grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1.2fr) minmax(0,1fr)}
+ #pBlend{border-right:0}
+ #pSide{grid-column:1 / span 2;border-top:1px solid var(--rule);border-right:0}
+ .jarwrap{flex-direction:row}
+ .jarrow{grid-template-columns:1fr 1fr;width:50%;align-content:start}
+ footer{grid-template-columns:repeat(4,1fr)}
+ footer .fader{grid-column:span 4}
+}
+
+/* ================= PHONE: one surface, tabs under the thumb ================= */
+body.phone #app{grid-template-rows:40px minmax(0,1fr) 44px auto;grid-template-areas:"head" "stage" "tabs" "dock"}
+body.phone header{gap:10px;padding:0 12px}
+body.phone .logo{font-size:12px;letter-spacing:.28em}
+body.phone .logo small,body.phone .meter{display:none}
+body.phone #name{font-size:11px}
+body.phone main{display:block;position:relative}
+body.phone section{position:absolute;inset:0;border:0;padding:6px 10px 4px;visibility:hidden}
+body.phone section.active{visibility:visible}
+body.phone h2{display:none}
+body.phone #ctl{gap:10px;margin-top:4px}
+body.phone .jarwrap{flex-direction:column}
+body.phone .jarrow{grid-template-columns:repeat(4,1fr);width:100%}
+body.phone .jar{height:46px}
+body.phone #tabs{grid-area:tabs;display:flex;gap:4px;padding:4px 10px;background:var(--bg)}
+#tabs div{flex:1;display:flex;align-items:center;justify-content:center;border-radius:18px;font:500 9.5px var(--sans);letter-spacing:.26em;color:var(--t3);border:1px solid transparent}
+#tabs div.active{color:var(--acc);border-color:rgba(0,196,168,.4);background:rgba(0,196,168,.07)}
+body.phone footer{grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 10px 10px}
+body.phone footer .btn.big{height:46px;font-size:9.5px;letter-spacing:.16em;border-radius:10px}
+body.phone footer .fader{grid-column:span 4;flex-direction:row;align-items:center;gap:10px}
+body.phone footer .fader label{flex:none;width:86px;flex-direction:column;gap:2px;letter-spacing:.24em}
+body.phone footer .track{flex:1;height:24px}
+body.phone .readout{font-size:10px}
+/* phone on its side: the surface on the left, everything else on the right */
+body.phone.land #app{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);grid-template-rows:34px 40px minmax(0,1fr) auto;grid-template-areas:"head head" "stage tabs" "stage chips" "stage dock"}
+#chipsLand{display:none}
+body.phone.land #chipsLand{grid-area:chips;display:flex;align-items:center;padding:4px 12px;border-left:1px solid var(--rule);min-height:0;overflow:hidden}
+body.phone.land #chipsLand #ctl{width:100%}
+body.phone.land footer{border-top:0;border-left:1px solid var(--rule);align-content:end;overflow:hidden}
+body.phone.land #tabs{border-left:1px solid var(--rule)}
+body.phone.land footer .btn.big{height:40px}
+</style></head>
+<body><div id="app">
+<header>
+ <div class="logo">ORAM<small>REMOTE</small></div>
+ <div id="name">…</div>
+ <div class="meter">IN<i><b id="mIn"></b></i></div>
+ <div class="meter">OUT<i><b id="mOut"></b></i></div>
+ <div id="tiltPill">TILT</div>
+ <div id="dot" title="connection"></div>
+</header>
+<main>
+ <section id="pStar" class="active"><h2><span>01</span>The Compass</h2><canvas id="star"></canvas><div class="readout" id="starRead">DIRECTION IS THE KIND · DISTANCE IS HOW MUCH · THROW IT</div>
+  <div id="ctlHome"><div id="ctl">
+   <div class="mini"><label>PITCH <b id="pitchRead">AS PLAYED</b></label><div class="track" id="pitchTrack"><u></u><i id="pitchFill"></i></div></div>
+   <div class="mini"><label>DRIFT <b id="driftRead">0%</b></label><div class="track" id="driftTrack"><i id="driftFill"></i></div></div>
+  </div></div></section>
+ <section id="pBlend"><h2><span>02</span>The Blend</h2><canvas id="blend"></canvas><div class="readout" id="blendRead"></div></section>
+ <section id="pSide">
+  <h2><span>03</span>Jars · hold a jar to store</h2>
+  <div class="jarwrap"><div class="jarrow" id="jars"></div><canvas id="jarpad"></canvas></div>
+ </section>
+</main>
+<div id="chipsLand"></div>
+<nav id="tabs"><div data-tab="pStar" class="active">COMPASS</div><div data-tab="pBlend">BLEND</div><div data-tab="pSide">JARS</div></nav>
+<footer>
+ <div class="btn big" data-act="transmute">Trans&shy;mute</div>
+ <div class="btn big" data-act="mutate">Mutate</div>
+ <div class="btn big" data-act="undo" id="bBack">Back</div>
+ <div class="btn big" data-act="redo" id="bFwd">Onward</div>
+ <div class="btn big" data-act="hold" id="bHold">Hold</div>
+ <div class="btn big warn" data-mom="dissolve" id="bDis">Dissolve</div>
+ <div class="btn big flood" data-mom="flood" id="bFlood">Flood</div>
+ <div class="btn big" id="bTilt">Tilt<small id="tiltWhat">off</small></div>
+ <div class="fader"><label>OUTPUT <b id="outRead">0.0 dB</b></label><div class="track" id="outTrack"><b id="outFill"></b></div></div>
+</footer>
+</div>
+<div id="lost"><div id="lostText">LOST THE LABORATORY<br><small>IS ORAM STILL OPEN, WITH REMOTE ON?</small></div></div>
+<div id="sheet"><div class="card" id="sheetCard"></div></div>
+<script>
+"use strict";
+const base = location.pathname.replace(/\/$/, "");
+const COL = ["#00c4a8", "#60a5fa", "#8b8dff", "#9be7dc"];
+const CORNER = [[0, 1], [1, 0], [0, -1], [-1, 0]];       // HARMONIC top, TIME right, DEPTH bottom, BEND left
+const JARC = [[-1, 1], [1, 1], [-1, -1], [1, -1]];
+let S = null, okAt = 0, expired = false;
+const local = {};                                    // values under a finger (or a tilt) win over the polled state
+const hold = (k, v, ms) => { local[k] = { v, until: performance.now() + (ms || 600) }; };
+const val = (k, v) => { const l = local[k]; return l && l.until > performance.now() ? l.v : v; };
+const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms || 8); } catch (e) {} };
+
+// ---------------- phone or tablet ----------------
+function shape() {
+  const phone = Math.min(innerWidth, innerHeight) < 560;
+  document.body.classList.toggle("phone", phone);
+  document.body.classList.toggle("land", phone && innerWidth > innerHeight);
+  const ctl = document.getElementById("ctl");
+  const land = phone && innerWidth > innerHeight;
+  const home = document.getElementById(land ? "chipsLand" : "ctlHome");
+  if (ctl.parentNode !== home) home.appendChild(ctl);
+}
+addEventListener("resize", shape); shape();
+document.querySelectorAll("#tabs div").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll("#tabs div").forEach(x => x.classList.toggle("active", x === t));
+  document.querySelectorAll("main section").forEach(s => s.classList.toggle("active", s.id === t.dataset.tab));
+  buzz(5);
+}));
+
+// ---------------- talking to ORAM ----------------
+const pendingSets = new Map(); let pendingCmds = [], sending = false;
+function setParam(id, v) { pendingSets.set(id, v); flush(); }
+function cmd(c) { pendingCmds.push(c); flush(); }
+function flush() {
+  if (sending || (!pendingSets.size && !pendingCmds.length)) return;
+  const lines = [...pendingCmds];
+  for (const [k, v] of pendingSets) lines.push("set " + k + " " + v.toFixed(4));
+  pendingCmds = []; pendingSets.clear(); sending = true;
+  if (peerId) {   // WEB mode: commands go down the direct (WebRTC) channel
+    try { if (conn && conn.open) conn.send({ t: "cmd", b: lines.join("\n") }); } catch (e) {}
+    sending = false; setTimeout(flush, 25); return;
+  }
+  fetch(base + "/cmd", { method: "POST", body: lines.join("\n") })
+    .catch(() => {}).finally(() => { sending = false; setTimeout(flush, 25); });
+}
+
+// ---------------- WEB mode ----------------
+// Opened from the website (https://.../#peer=ORAM-ID) instead of from the plugin
+// itself: a signalling server introduces this page to the plugin, then the two
+// talk directly over the local network (a WebRTC data channel).  The page has a
+// real certificate, so no warnings, and TILT works.  The plugin pushes its state.
+const peerId = (location.hash.match(/peer=([A-Za-z0-9_-]+)/) || [])[1] || null;
+let conn = null, peerTries = 0;
+function startPeer() {
+  const go = () => {
+    const me = new Peer(undefined, { debug: 1 });
+    me.on("open", () => {
+      conn = me.connect(peerId, { serialization: "json", reliable: true });
+      conn.on("data", d => { if (d && d.t === "state" && d.s) { S = d.s; okAt = performance.now(); expired = false; render(); } });
+      conn.on("close", () => { conn = null; retry(me); });
+      conn.on("error", () => { conn = null; retry(me); });
+    });
+    me.on("error", e => { if (e && e.type === "peer-unavailable") expired = true; retry(me); });
+  };
+  const retry = me => { try { me.destroy(); } catch (e) {} if (++peerTries < 60) setTimeout(go, Math.min(8000, 800 * peerTries)); };
+  if (window.Peer) return go();
+  const sc = document.createElement("script");
+  sc.src = "https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js";
+  sc.onload = go;
+  document.head.appendChild(sc);
+}
+async function poll() {
+  if (peerId) { if (!conn && !window.__peerStarted) { window.__peerStarted = true; startPeer(); } }
+  else try {
+    const r = await fetch(base + "/state", { cache: "no-store" });
+    if (r.ok) { S = await r.json(); okAt = performance.now(); expired = false; render(); }
+    else if (r.status === 404) expired = true;
+  } catch (e) {}
+  const lost = expired || (performance.now() - okAt > 2500 && okAt > 0);
+  document.getElementById("lostText").innerHTML = expired
+    ? "THIS ADDRESS HAS EXPIRED<br><small>SWITCH REMOTE ON IN ORAM AND SCAN THE NEW QR CODE</small>"
+    : "LOST THE LABORATORY<br><small>IS ORAM STILL OPEN, WITH REMOTE ON?</small>";
+  document.getElementById("lost").classList.toggle("show", lost);
+  document.getElementById("dot").className = lost ? "off" : "on";
+  setTimeout(poll, expired ? 2000 : sending ? 140 : 90);
+}
+
+// ---------------- canvases ----------------
+function fit(cv) {
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * d) || cv.height !== Math.round(r.height * d)) { cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); }
+  const g = cv.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); return { g, w: r.width, h: r.height };
+}
+const starCv = document.getElementById("star"), blendCv = document.getElementById("blend"), jarCv = document.getElementById("jarpad");
+const geo = { star: null, blend: null };
+const visible = cv => cv.offsetParent !== null && getComputedStyle(cv.closest("section")).visibility !== "hidden";
+
+// ---- THE COMPASS: direction is the kind of sound, distance is how much
+const POLE_COL = ["#60a5fa", "#9be7dc", "#00c4a8", "#e0607a", "#d9a066", "#e8b48a", "#8b8dff", "#6f7bd8"];
+const trail = [];
+function cPos() { return [val("cx", S ? S.compass[0] : 0), val("cy", S ? S.compass[1] : 0)]; }
+function drawStar() {
+  const { g, w, h } = fit(starCv);
+  const small = w < 420, R = Math.max(30, Math.min(w * 0.5 - (small ? 34 : 50), h * 0.5 - (small ? 24 : 30)));
+  geo.star = { cx: w / 2, cy: h / 2, r: R };
+  const G = geo.star, P = (x, y) => [G.cx + x * R, G.cy - y * R];
+  g.clearRect(0, 0, w, h);
+  g.save(); g.beginPath(); g.arc(G.cx, G.cy, R, 0, Math.PI * 2); g.clip();
+  g.fillStyle = "#0b0b18"; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 8; i++) {
+    const th = i * Math.PI / 4, px = G.cx + Math.sin(th) * R * 0.95, py = G.cy - Math.cos(th) * R * 0.95;
+    const gr = g.createRadialGradient(px, py, 0, px, py, R * 0.75); gr.addColorStop(0, POLE_COL[i] + "38"); gr.addColorStop(1, POLE_COL[i] + "00");
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  }
+  const core = g.createRadialGradient(G.cx, G.cy, 0, G.cx, G.cy, R * 0.55); core.addColorStop(0, "rgba(11,11,24,.95)"); core.addColorStop(1, "rgba(11,11,24,0)");
+  g.fillStyle = core; g.fillRect(0, 0, w, h);
+  g.restore();
+  for (let k = 1; k <= 4; k++) { g.beginPath(); g.arc(G.cx, G.cy, R * k / 4, 0, Math.PI * 2); g.strokeStyle = k === 4 ? "rgba(255,255,255,.15)" : "rgba(255,255,255,.05)"; g.lineWidth = 1; g.stroke(); }
+  const [x, y] = cPos();
+  g.textAlign = "center"; g.textBaseline = "middle"; g.font = "500 " + (small ? 8.5 : 10) + "px sans-serif";
+  for (let i = 0; i < 8; i++) {
+    const th = i * Math.PI / 4, dx = Math.sin(th), dy = -Math.cos(th);
+    const near = Math.max(0, Math.min(1, x * dx - y * dy));
+    g.globalAlpha = 0.45 + 0.55 * near; g.fillStyle = POLE_COL[i];
+    g.fillText(S ? S.poles[i] : "", G.cx + dx * (R + (small ? 16 : 24)), G.cy + dy * (R + (small ? 14 : 22)));
+  }
+  g.globalAlpha = 1;
+  const [px, py] = P(x, y);
+  const last = trail[trail.length - 1];
+  if (!last || Math.hypot(last[0] - x, last[1] - y) > 0.002) trail.push([x, y]); else if (trail.length > 1) trail.shift();
+  if (trail.length > 60) trail.shift();
+  for (let i = 1; i < trail.length; i++) {
+    const a = i / trail.length, [x0, y0] = P(...trail[i - 1]), [x1, y1] = P(...trail[i]);
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.strokeStyle = "rgba(0,196,168," + (0.45 * a * a) + ")"; g.lineWidth = 1 + 2.5 * a; g.stroke();
+  }
+  g.beginPath(); g.moveTo(G.cx, G.cy); g.lineTo(px, py); g.strokeStyle = "rgba(0,196,168,.18)"; g.lineWidth = 1.5; g.stroke();
+  g.beginPath(); g.arc(G.cx, G.cy, 4, 0, Math.PI * 2); g.fillStyle = "rgba(255,255,255,.25)"; g.fill();
+  const lvl = S ? Math.min(1, Math.sqrt(S.out) * 1.3) : 0, halo = 18 + 12 * lvl, tilting = tilt.on && tilt.target === "compass";
+  g.beginPath(); g.arc(px, py, halo, 0, Math.PI * 2); g.fillStyle = "rgba(0,196,168," + (0.12 + 0.12 * lvl) + ")"; g.fill();
+  g.beginPath(); g.arc(px, py, 15, 0, Math.PI * 2); g.strokeStyle = tilting ? "rgba(96,165,250,.7)" : "rgba(0,196,168,.5)"; g.lineWidth = 2; g.stroke();
+  g.beginPath(); g.arc(px, py, 8, 0, Math.PI * 2); g.fillStyle = "#00c4a8"; g.fill();
+  g.beginPath(); g.arc(px, py, 2.5, 0, Math.PI * 2); g.fillStyle = "#07070f"; g.fill();
+}
+
+function drawBlend() {
+  const { g, w, h } = fit(blendCv);
+  const r = Math.max(30, Math.min(w * 0.5 - 46, h * 0.5 - 36)); geo.blend = { cx: w / 2, cy: h / 2, r };
+  const G = geo.blend, P = (x, y) => [G.cx + x * G.r, G.cy - y * G.r];
+  g.clearRect(0, 0, w, h);
+  g.beginPath(); CORNER.forEach(([x, y], i) => { const p = P(x, y); i ? g.lineTo(...p) : g.moveTo(...p); }); g.closePath();
+  g.fillStyle = "rgba(255,255,255,.02)"; g.fill(); g.strokeStyle = "rgba(255,255,255,.10)"; g.lineWidth = 1; g.stroke();
+  g.beginPath(); g.moveTo(...P(0, 1)); g.lineTo(...P(0, -1)); g.moveTo(...P(-1, 0)); g.lineTo(...P(1, 0)); g.strokeStyle = "rgba(255,255,255,.05)"; g.stroke();
+  const bx = val("blendX", S ? S.blend[0] : 0), by = val("blendY", S ? S.blend[1] : 0);
+  g.textAlign = "center"; g.textBaseline = "middle";
+  for (let c = 0; c < 4; c++) {
+    const [x, y] = P(...CORNER[c]), ch = S ? S.chambers[c] : null;
+    const d = Math.hypot(bx - CORNER[c][0], by - CORNER[c][1]); let share = Math.max(0, 1 - d / 1.75); share *= share;
+    const lev = ch ? Math.min(1, Math.sqrt(ch.level) * 1.4) : 0;
+    g.beginPath(); g.arc(x, y, 14 + 10 * lev, 0, Math.PI * 2); g.fillStyle = COL[c] + "22"; g.fill();
+    g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fillStyle = ch && !ch.on ? "#222" : COL[c]; g.globalAlpha = 0.35 + 0.65 * Math.min(1, share * 1.3); g.fill(); g.globalAlpha = 1;
+    const ly = CORNER[c][1] > 0 ? y - 26 : CORNER[c][1] < 0 ? y + 26 : y - 22;
+    g.font = "500 9px sans-serif"; g.fillStyle = COL[c]; g.fillText(ch ? ch.name : "", x, ly);
+  }
+  const [px, py] = P(bx, by), tilting = tilt.on && tilt.target === "blend";
+  g.beginPath(); g.arc(px, py, 15, 0, Math.PI * 2); g.strokeStyle = tilting ? "rgba(0,196,168,.5)" : "rgba(96,165,250,.35)"; g.lineWidth = 6; g.stroke();
+  g.beginPath(); g.arc(px, py, 9, 0, Math.PI * 2); g.fillStyle = tilting ? "#00c4a8" : "#60a5fa"; g.fill();
+}
+
+function drawJarPad() {
+  const { g, w, h } = fit(jarCv);
+  g.clearRect(0, 0, w, h);
+  const half = Math.min(w, h) / 2 - 16, P = (x, y) => [w / 2 + x * half, h / 2 - y * half];
+  g.strokeStyle = "rgba(255,255,255,.05)"; g.lineWidth = 1; g.strokeRect(w / 2 - half, h / 2 - half, half * 2, half * 2);
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = P(...JARC[i]), full = S && S.jars[i].full;
+    g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2); g.fillStyle = full ? "#00c4a8" : "rgba(255,255,255,.12)"; g.fill();
+  }
+  g.font = "500 8.5px sans-serif"; g.textAlign = "center"; g.fillStyle = "rgba(220,220,240,.32)";
+  g.fillText("JAR MORPH", w / 2, h / 2 + 3);
+  const jx = val("jarX", S ? S.jarXY[0] : 0), jy = val("jarY", S ? S.jarXY[1] : 0);
+  const [px, py] = P(jx, jy);
+  g.beginPath(); g.arc(px, py, 10, 0, Math.PI * 2); g.strokeStyle = "#00c4a8"; g.lineWidth = 2; g.stroke();
+  if (tilt.on && tilt.target === "jars") { g.beginPath(); g.arc(px, py, 4, 0, Math.PI * 2); g.fillStyle = "#00c4a8"; g.fill(); }
+}
+
+// ---------------- touch ----------------
+const drag = [];   // one entry per finger
+const ptIn = (cv, e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+let lastTap = { t: 0, i: -2 };
+
+let recent = [], lastCentreTap = 0;
+starCv.addEventListener("pointerdown", e => {
+  if (!S || !geo.star) return;
+  try { starCv.setPointerCapture(e.pointerId); } catch (x) {}
+  const [x, y] = ptIn(starCv, e), G = geo.star, now = performance.now();
+  if (Math.hypot(x - G.cx, y - G.cy) < 26) {
+    if (now - lastCentreTap < 330) { cmd("home"); trail.length = 0; buzz(15); lastCentreTap = 0; return; }
+    lastCentreTap = now;
+  }
+  recent = [];
+  drag.push({ id: e.pointerId, kind: "compass" });
+  moveStar(e);
+});
+function sendCompass(x, y) {
+  const r = Math.hypot(x, y); if (r > 1) { x /= r; y /= r; }
+  hold("cx", x, 400); hold("cy", y, 400); setParam("compassX", x); setParam("compassY", y);
+  return [x, y];
+}
+function moveStar(e) {
+  const d = drag.find(d => d.id === e.pointerId); if (!d || !geo.star) return;
+  const [px, py] = ptIn(starCv, e), G = geo.star;
+  const [x, y] = sendCompass((px - G.cx) / G.r, -(py - G.cy) / G.r);
+  const now = performance.now();
+  recent.push([x, y, now]); while (recent.length > 2 && now - recent[0][2] > 90) recent.shift();
+}
+starCv.addEventListener("pointerup", e => {
+  if (!drag.some(d => d.id === e.pointerId && d.kind === "compass")) return;
+  if (recent.length >= 2) {
+    const a = recent[0], b = recent[recent.length - 1], dt = (b[2] - a[2]) / 1000;
+    if (dt > 0.005 && performance.now() - b[2] < 60) {
+      const vx = (b[0] - a[0]) / dt, vy = (b[1] - a[1]) / dt;
+      if (Math.hypot(vx, vy) > 0.25) { pendingSets.delete("compassX"); pendingSets.delete("compassY"); cmd("fling " + vx.toFixed(3) + " " + vy.toFixed(3)); delete local.cx; delete local.cy; }
+    }
+  }
+  recent = [];
+});
+starCv.addEventListener("pointermove", moveStar);
+
+blendCv.addEventListener("pointerdown", e => { try { blendCv.setPointerCapture(e.pointerId); } catch (x) {} drag.push({ id: e.pointerId, kind: "blend" }); moveBlend(e); });
+function moveBlend(e) {
+  if (!drag.find(d => d.id === e.pointerId) || !geo.blend) return;
+  const [x, y] = ptIn(blendCv, e), G = geo.blend;
+  sendBlend((x - G.cx) / G.r, -(y - G.cy) / G.r);
+}
+function sendBlend(bx, by) {
+  const m = Math.abs(bx) + Math.abs(by);
+  if (m > 1) { bx /= m; by /= m; }
+  hold("blendX", bx); hold("blendY", by); setParam("blendX", bx); setParam("blendY", by);
+}
+blendCv.addEventListener("pointermove", moveBlend);
+
+jarCv.addEventListener("pointerdown", e => { try { jarCv.setPointerCapture(e.pointerId); } catch (x) {} drag.push({ id: e.pointerId, kind: "jar" }); moveJar(e); });
+function moveJar(e) {
+  if (!drag.find(d => d.id === e.pointerId)) return;
+  const r = jarCv.getBoundingClientRect(), [x, y] = ptIn(jarCv, e);
+  const half = Math.min(r.width, r.height) / 2 - 16;
+  sendJar((x - r.width / 2) / half, (r.height / 2 - y) / half);
+}
+function sendJar(jx, jy) {
+  jx = Math.max(-1, Math.min(1, jx)); jy = Math.max(-1, Math.min(1, jy));
+  hold("jarX", jx); hold("jarY", jy);
+  // only the newest position waits in the queue, so the last one always arrives
+  pendingCmds = pendingCmds.filter(c => !c.startsWith("jarmorph")); cmd("jarmorph " + jx.toFixed(3) + " " + jy.toFixed(3));
+}
+jarCv.addEventListener("pointermove", moveJar);
+
+const lift = e => { const i = drag.findIndex(d => d.id === e.pointerId); if (i >= 0) drag.splice(i, 1); };
+for (const cv of [starCv, blendCv, jarCv]) { cv.addEventListener("pointerup", lift); cv.addEventListener("pointercancel", lift); }
+
+// buttons: a tap is an action; DISSOLVE and FLOOD are held
+document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("pointerdown", () => { cmd(b.dataset.act); buzz(); b.classList.add("down"); setTimeout(() => b.classList.remove("down"), 160); }));
+document.querySelectorAll("[data-mom]").forEach(b => {
+  const up = () => { if (!b.classList.contains("down")) return; b.classList.remove("down"); cmd(b.dataset.mom + " 0"); };
+  b.addEventListener("pointerdown", e => { try { b.setPointerCapture(e.pointerId); } catch (x) {} b.classList.add("down"); buzz(12); cmd(b.dataset.mom + " 1"); });
+  b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("lostpointercapture", up);
+});
+
+// characters and jars are built once the first state arrives
+function buildOnce() {
+  const jr = document.getElementById("jars");
+  if (!jr.children.length) for (let i = 0; i < 4; i++) {
+    const b = document.createElement("div"); b.className = "btn jar"; b.innerHTML = "JAR " + (i + 1) + "<em>empty</em>";
+    let timer = null, long = false;
+    b.addEventListener("pointerdown", () => { long = false; b.classList.add("down"); timer = setTimeout(() => { long = true; cmd("jarstore " + i); buzz(30); b.classList.add("lit"); setTimeout(() => b.classList.remove("lit"), 400); }, 650); });
+    const up = () => { clearTimeout(timer); if (b.classList.contains("down") && !long) { cmd("jar " + i); buzz(); } b.classList.remove("down"); };
+    b.addEventListener("pointerup", up); b.addEventListener("pointercancel", () => { clearTimeout(timer); b.classList.remove("down"); });
+    jr.appendChild(b);
+  }
+}
+
+// output fader: -24..+12 dB, double-tap for 0 dB
+const outTrack = document.getElementById("outTrack"); let outTap = 0;
+const outToX = v => (v + 24) / 36, xToOut = f => Math.round((f * 36 - 24) * 2) / 2;
+function moveOut(e) {
+  if (!drag.find(d => d.id === e.pointerId)) return;
+  const r = outTrack.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), v = xToOut(f);
+  hold("output", v); setParam("output", v);
+}
+outTrack.addEventListener("pointerdown", e => {
+  try { outTrack.setPointerCapture(e.pointerId); } catch (x) {}
+  const now = performance.now();
+  if (now - outTap < 330) { hold("output", 0); setParam("output", 0); outTap = 0; buzz(); return; }
+  outTap = now; drag.push({ id: e.pointerId, kind: "out" }); moveOut(e);
+});
+outTrack.addEventListener("pointermove", moveOut);
+outTrack.addEventListener("pointerup", lift); outTrack.addEventListener("pointercancel", lift);
+
+// PITCH (-1 down by steps .. +1 tape wobble) and DRIFT (0..1): double-tap resets
+function fader(trackId, key, id, lo, def) {
+  const tr = document.getElementById(trackId); let tap = 0;
+  const move = e => {
+    if (!drag.find(d => d.id === e.pointerId)) return;
+    const r = tr.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), v = lo + f * (1 - lo);
+    hold(key, v); setParam(id, v);
+  };
+  tr.addEventListener("pointerdown", e => {
+    try { tr.setPointerCapture(e.pointerId); } catch (x) {}
+    const now = performance.now();
+    if (now - tap < 330) { hold(key, def); setParam(id, def); tap = 0; buzz(); return; }
+    tap = now; drag.push({ id: e.pointerId, kind: key }); move(e);
+  });
+  tr.addEventListener("pointermove", move); tr.addEventListener("pointerup", lift); tr.addEventListener("pointercancel", lift);
+}
+fader("pitchTrack", "pitch", "mPitch", -1, 0);
+fader("driftTrack", "drift", "compassDrift", 0, 0);
+
+// ---------------- TILT: the phone itself is the controller ----------------
+// Tap TILT to go round BLEND -> JARS -> STAR (TONE and SPACE) -> off.  The way the
+// phone is held when TILT starts is the centre; tap the TILT pill to re-centre.
+// A sharp shake MUTATEs.
+const TARGETS = ["compass", "blend", "jars"], TNAMES = { compass: "compass", blend: "blend", jars: "jar morph" };
+const tilt = { on: false, target: "blend", x0: null, y0: null, sx: 0, sy: 0, base: [0, 0], lastEvent: 0, lastShake: 0, attached: false, sendAt: 0 };
+function sheet(html) { document.getElementById("sheetCard").innerHTML = html; document.getElementById("sheet").classList.add("show"); }
+document.getElementById("sheet").addEventListener("click", e => { if (e.target.id === "sheet" || e.target.dataset.close !== undefined) document.getElementById("sheet").classList.remove("show"); });
+
+async function askSensors() {
+  if (!window.isSecureContext) {
+    const sec = S && S.secure;
+    sheet(sec
+      ? "<h3>TILT</h3><p>Phones only lend a page their <b>motion sensors</b> over a secure address. ORAM has one, made by your own Mac.</p>"
+        + "<p>Your phone will warn once that the connection isn't private: that is ORAM's own certificate. On iPhone tap <b>Show Details → visit this website</b>; on Android <b>Advanced → Proceed</b>. Then tap TILT again and allow motion.</p>"
+        + "<div class='row'><div class='btn' data-close>Not now</div><a class='btn lit' href='" + sec + "'>Open secure address</a></div>"
+      : "<h3>TILT</h3><p>Phones only lend a page their motion sensors over a secure address, and this ORAM was built without one.</p><div class='row'><div class='btn' data-close>OK</div></div>");
+    return false;
+  }
+  try {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      const a = await DeviceOrientationEvent.requestPermission();
+      if (a !== "granted") throw new Error("denied");
+      if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") { try { await DeviceMotionEvent.requestPermission(); } catch (e) {} }
+    }
+  } catch (e) {
+    sheet("<h3>TILT</h3><p>Motion access was refused. To allow it again, close this tab and open the address again (on iPhone, also check <b>Settings → Safari → Motion &amp; Orientation Access</b>).</p><div class='row'><div class='btn' data-close>OK</div></div>");
+    return false;
+  }
+  if (!tilt.attached) { addEventListener("deviceorientation", onOrient); addEventListener("devicemotion", onMotion); tilt.attached = true; }
+  const since = performance.now();
+  setTimeout(() => {
+    if (tilt.on && tilt.lastEvent < since) {
+      setTilt(false);
+      sheet("<h3>TILT</h3><p>No motion is coming from this device. It may have no motion sensor (a laptop), or the browser keeps it to itself.</p><div class='row'><div class='btn' data-close>OK</div></div>");
+    }
+  }, 1500);
+  return true;
+}
+function setTilt(on, target) {
+  tilt.on = on; if (target) tilt.target = target;
+  tilt.x0 = null; tilt.sx = 0; tilt.sy = 0;
+  if (on && tilt.target === "compass") tilt.base = cPos();
+  document.getElementById("bTilt").classList.toggle("lit", on);
+  document.getElementById("tiltWhat").textContent = on ? TNAMES[tilt.target] : "off";
+  const pill = document.getElementById("tiltPill"); pill.classList.toggle("on", on); pill.textContent = on ? "TILT · " + TNAMES[tilt.target].toUpperCase() : "TILT";
+  // show the surface being steered
+  if (on && document.body.classList.contains("phone")) {
+    const tab = tilt.target === "blend" ? "pBlend" : tilt.target === "jars" ? "pSide" : "pStar";
+    document.querySelector("#tabs div[data-tab='" + tab + "']").click();
+  }
+}
+document.getElementById("bTilt").addEventListener("click", async () => {
+  buzz();
+  if (!tilt.on) { if (await askSensors()) setTilt(true, "compass"); return; }
+  const k = TARGETS.indexOf(tilt.target);
+  if (k + 1 < TARGETS.length) setTilt(true, TARGETS[k + 1]); else setTilt(false);
+});
+document.getElementById("tiltPill").addEventListener("click", () => { tilt.x0 = null; if (tilt.target === "compass") tilt.base = cPos(); buzz(15); });
+
+function screenAngle() {
+  const a = (screen.orientation && typeof screen.orientation.angle === "number") ? screen.orientation.angle : (window.orientation || 0);
+  return ((a % 360) + 360) % 360;
+}
+function onOrient(e) {
+  if (e.beta == null || e.gamma == null) return;
+  tilt.lastEvent = performance.now();
+  if (!tilt.on) return;
+  // the phone's tilt seen from the screen as it is held
+  let x, y; const a = screenAngle();
+  if (a === 90) { x = e.beta; y = -e.gamma; } else if (a === 270) { x = -e.beta; y = e.gamma; } else if (a === 180) { x = -e.gamma; y = -e.beta; } else { x = e.gamma; y = e.beta; }
+  if (tilt.x0 === null) { tilt.x0 = x; tilt.y0 = y; }
+  const range = 28, dead = 0.06;
+  let dx = (x - tilt.x0) / range, dy = -(y - tilt.y0) / range;      // tip the top away from you = up
+  const shapeIt = v => { const s = Math.sign(v), m = Math.max(0, Math.abs(v) - dead) / (1 - dead); return s * Math.min(1, m); };
+  dx = shapeIt(dx); dy = shapeIt(dy);
+  tilt.sx += (dx - tilt.sx) * 0.22; tilt.sy += (dy - tilt.sy) * 0.22;   // a little inertia, like something with weight
+  const now = performance.now();
+  if (now - tilt.sendAt < 40) return;
+  tilt.sendAt = now;
+  if (tilt.target === "blend") sendBlend(tilt.sx, tilt.sy);
+  else if (tilt.target === "jars") sendJar(tilt.sx, tilt.sy);
+  else sendCompass(tilt.base[0] + tilt.sx, tilt.base[1] + tilt.sy);   // the compass: lean it where you want to go
+}
+function onMotion(e) {
+  if (!tilt.on) return;
+  const a = e.acceleration;
+  let m = 0;
+  if (a && a.x != null) m = Math.hypot(a.x, a.y, a.z);
+  else if (e.accelerationIncludingGravity && e.accelerationIncludingGravity.x != null) { const g = e.accelerationIncludingGravity; m = Math.abs(Math.hypot(g.x, g.y, g.z) - 9.81); }
+  const now = performance.now();
+  if (m > 17 && now - tilt.lastShake > 1500) {
+    tilt.lastShake = now; cmd("mutate"); buzz([20, 40, 20]);
+    const b = document.querySelector("[data-act='mutate']"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 450);
+  }
+}
+
+// ---------------- render ----------------
+function render() {
+  if (!S) return;
+  buildOnce();
+  document.getElementById("name").textContent = S.name;
+  document.getElementById("mIn").style.width = Math.min(100, Math.sqrt(S.in) * 110) + "%";
+  document.getElementById("mOut").style.width = Math.min(100, Math.sqrt(S.out) * 110) + "%";
+  document.getElementById("bHold").classList.toggle("lit", S.hold);
+  document.getElementById("bBack").classList.toggle("dim", !S.back);
+  document.getElementById("bFwd").classList.toggle("dim", !S.fwd);
+  document.getElementById("bFlood").classList.toggle("lit", S.flood);
+  const jr = document.getElementById("jars").children;
+  for (let i = 0; i < 4 && i < jr.length; i++) { jr[i].classList.toggle("full", S.jars[i].full); jr[i].querySelector("em").textContent = S.jars[i].full ? S.jars[i].name : "empty"; }
+  const o = val("output", S.output);
+  document.getElementById("outFill").style.width = "calc(" + (outToX(o) * 100) + "% - 6px)";
+  document.getElementById("outRead").textContent = (o > 0 ? "+" : "") + o.toFixed(1) + " dB";
+  const parts = S.chambers.filter(c => c.on && c.machines).map(c => c.name + ": " + c.machines);
+  document.getElementById("blendRead").textContent = parts.length ? parts[0] + (parts.length > 1 ? "  +" + (parts.length - 1) : "") : "";
+  document.getElementById("starRead").textContent = S.words;
+  const pv = val("pitch", S.pitchV), dv = val("drift", S.drift);
+  document.getElementById("pitchRead").textContent = S.pitch;
+  const pf = document.getElementById("pitchFill"); pf.style.left = (50 + Math.min(0, pv) * 50) + "%"; pf.style.width = (Math.abs(pv) * 50) + "%"; pf.style.background = pv < 0 ? "#8b8dff" : "#00c4a8";
+  document.getElementById("driftRead").textContent = Math.round(dv * 100) + "%";
+  const df = document.getElementById("driftFill"); df.style.left = "3px"; df.style.width = "calc(" + (dv * 100) + "% - 6px)"; df.style.background = "linear-gradient(90deg,#1840B8,#60A5FA)";
+}
+function frame() {
+  if (visible(starCv)) drawStar();
+  if (visible(blendCv)) drawBlend();
+  if (visible(jarCv)) drawJarPad();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+poll();
+document.addEventListener("gesturestart", e => e.preventDefault());
+</script>
+</body></html>
