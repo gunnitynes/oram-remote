@@ -41,6 +41,18 @@ canvas{display:block;width:100%;flex:1 1 0;min-height:0;touch-action:none}
 .mini .track{height:26px}
 .mini .track i{position:absolute;top:3px;bottom:3px;border-radius:10px;background:var(--acc)}
 .mini .track u{position:absolute;top:-2px;bottom:-2px;width:1px;left:50%;background:rgba(255,255,255,.25)}
+/* PITCH is ONE control: tune down on the left, tape wobble on the right, as played in the middle */
+#pitchTrack{background:linear-gradient(90deg,rgba(139,141,255,.16),rgba(139,141,255,.04) 49.5%,rgba(255,255,255,.0) 50%,rgba(0,196,168,.04) 50.5%,rgba(0,196,168,.16))}
+#pitchTrack em{position:absolute;top:0;bottom:0;display:flex;align-items:center;font:500 7.5px var(--sans);letter-spacing:.2em;pointer-events:none;white-space:nowrap}
+#pitchTrack em.l{left:9px;color:rgba(170,172,255,.75)} #pitchTrack em.r{right:9px;color:rgba(80,220,200,.75)}
+#capRow{display:grid;grid-template-columns:1.3fr 1fr;gap:6px;margin-bottom:8px;flex:none}
+.caps{max-height:60vh;overflow-y:auto;margin:6px -4px 0;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.cap{display:flex;align-items:center;gap:6px;padding:8px 4px;border-top:1px solid var(--rule)}
+.cap .n{flex:1;min-width:0;font:400 11px var(--mono);color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 0}
+.cap .n b{color:var(--t3);font-weight:400;margin-right:6px}
+.cap .btn{height:32px;padding:0 10px;font-size:8.5px;flex:none}
+#toast{position:fixed;left:50%;bottom:22%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--acc);color:var(--acc);font:500 10px var(--sans);letter-spacing:.24em;padding:10px 16px;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:20;white-space:nowrap}
+#toast.show{opacity:1}
 .btn{background:var(--s2);border:1px solid rgba(255,255,255,.08);color:var(--t1);border-radius:8px;font:500 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;padding:0 4px;height:42px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.15;transition:background .12s,border-color .12s,box-shadow .12s;flex-direction:column;gap:2px;min-width:0}
 .btn small{font:400 7.5px var(--mono);letter-spacing:.06em;color:var(--t3);text-transform:uppercase}
 .btn:active,.btn.down{background:#13213a;border-color:var(--ice)}
@@ -48,7 +60,9 @@ canvas{display:block;width:100%;flex:1 1 0;min-height:0;touch-action:none}
 .btn.lit small{color:var(--acc)}
 .btn.dim{opacity:.35}
 .btn.big{height:58px;font-size:11px}
-.btn.warn.down{background:#3a1820;border-color:var(--coral);color:#ffb3c1}
+.btn.warn{border-color:rgba(224,96,122,.55);color:#ffc2cd;background:linear-gradient(180deg,rgba(224,96,122,.16),rgba(224,96,122,.05))}
+.btn.warn small{color:rgba(255,194,205,.6)}
+.btn.warn.down{background:#4a1c27;border-color:var(--coral);color:#fff;box-shadow:0 0 22px rgba(224,96,122,.45)}
 .btn.flood.down{background:#0f3a33;border-color:var(--acc);color:#b8fff4}
 .btn.flash{border-color:var(--ice);box-shadow:0 0 18px rgba(96,165,250,.5)}
 .jarrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:0 0 auto}
@@ -59,7 +73,7 @@ canvas{display:block;width:100%;flex:1 1 0;min-height:0;touch-action:none}
 .jar.full em{color:var(--acc)}
 #jarpad{border:1px solid rgba(255,255,255,.08);border-radius:10px;background:var(--s1);flex:1 1 0;min-height:120px;width:100%}
 #tabs{display:none}
-footer{grid-area:dock;display:grid;grid-template-columns:repeat(8,1fr) 1.6fr;gap:8px;padding:10px 14px;border-top:1px solid var(--rule);background:var(--s1)}
+footer{grid-area:dock;display:grid;grid-template-columns:repeat(9,1fr) 1.6fr;gap:8px;padding:10px 14px;border-top:1px solid var(--rule);background:var(--s1)}
 .fader{display:flex;flex-direction:column;justify-content:center;gap:4px}
 .fader label{font-size:8.5px;letter-spacing:.3em;color:var(--t3);display:flex;justify-content:space-between}
 .fader label b{font-family:var(--mono);font-weight:400;color:var(--t2);letter-spacing:.04em}
@@ -104,9 +118,9 @@ body.phone #tabs{grid-area:tabs;display:flex;gap:4px;padding:4px 10px;background
 #tabs div.active{color:var(--acc);border-color:rgba(0,196,168,.4);background:rgba(0,196,168,.07)}
 body.phone footer{grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 10px 10px}
 body.phone footer .btn.big{height:46px;font-size:9.5px;letter-spacing:.16em;border-radius:10px}
-body.phone footer .fader{grid-column:span 4;flex-direction:row;align-items:center;gap:10px}
-body.phone footer .fader label{flex:none;width:86px;flex-direction:column;gap:2px;letter-spacing:.24em}
-body.phone footer .track{flex:1;height:24px}
+body.phone footer .fader{display:none}                       /* the master OUTPUT stays on the Mac */
+body.phone footer #bDis{grid-column:1 / -1;order:99;height:60px;font-size:13px;letter-spacing:.42em;border-radius:14px}
+body.phone footer #bDis small{font-size:8px;letter-spacing:.2em}
 body.phone .readout{font-size:10px}
 /* phone on its side: the surface on the left, everything else on the right */
 body.phone.land #app{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);grid-template-rows:34px 40px minmax(0,1fr) auto;grid-template-areas:"head head" "stage tabs" "stage chips" "stage dock"}
@@ -116,6 +130,7 @@ body.phone.land #chipsLand #ctl{width:100%}
 body.phone.land footer{border-top:0;border-left:1px solid var(--rule);align-content:end;overflow:hidden}
 body.phone.land #tabs{border-left:1px solid var(--rule)}
 body.phone.land footer .btn.big{height:40px}
+body.phone.land footer #bDis{height:46px}
 </style></head>
 <body><div id="app">
 <header>
@@ -129,12 +144,13 @@ body.phone.land footer .btn.big{height:40px}
 <main>
  <section id="pStar" class="active"><h2><span>01</span>The Compass</h2><canvas id="star"></canvas><div class="readout" id="starRead">DIRECTION IS THE KIND · DISTANCE IS HOW MUCH · THROW IT</div>
   <div id="ctlHome"><div id="ctl">
-   <div class="mini"><label>PITCH <b id="pitchRead">AS PLAYED</b></label><div class="track" id="pitchTrack"><u></u><i id="pitchFill"></i></div></div>
+   <div class="mini"><label>PITCH <b id="pitchRead">AS PLAYED</b></label><div class="track" id="pitchTrack"><em class="l">&#9666; TUNE DOWN</em><em class="r">TAPE WOBBLE &#9656;</em><u></u><i id="pitchFill"></i></div></div>
    <div class="mini"><label>DRIFT <b id="driftRead">0%</b></label><div class="track" id="driftTrack"><i id="driftFill"></i></div></div>
   </div></div></section>
  <section id="pBlend"><h2><span>02</span>The Blend</h2><canvas id="blend"></canvas><div class="readout" id="blendRead"></div></section>
  <section id="pSide">
   <h2><span>03</span>Jars · hold a jar to store</h2>
+  <div id="capRow"><div class="btn" id="bCap2">Capture<small>keep this sound</small></div><div class="btn" id="bCapList">Captures &#9662;<small id="capCount">none yet</small></div></div>
   <div class="jarwrap"><div class="jarrow" id="jars"></div><canvas id="jarpad"></canvas></div>
  </section>
 </main>
@@ -146,14 +162,16 @@ body.phone.land footer .btn.big{height:40px}
  <div class="btn big" data-act="undo" id="bBack">Back</div>
  <div class="btn big" data-act="redo" id="bFwd">Onward</div>
  <div class="btn big" data-act="hold" id="bHold">Hold</div>
- <div class="btn big warn" data-mom="dissolve" id="bDis">Dissolve</div>
+ <div class="btn big warn" data-mom="dissolve" id="bDis">Dissolve<small>let it all settle</small></div>
  <div class="btn big flood" data-mom="flood" id="bFlood">Flood</div>
  <div class="btn big" id="bTilt">Tilt<small id="tiltWhat">off</small></div>
+ <div class="btn big" id="bCapture">Capture<small id="capWhat">keep this</small></div>
  <div class="fader"><label>OUTPUT <b id="outRead">0.0 dB</b></label><div class="track" id="outTrack"><b id="outFill"></b></div></div>
 </footer>
 </div>
 <div id="lost"><div id="lostText">LOST THE LABORATORY<br><small>IS ORAM STILL OPEN, WITH REMOTE ON?</small></div></div>
 <div id="sheet"><div class="card" id="sheetCard"></div></div>
+<div id="toast"></div>
 <script>
 "use strict";
 const base = location.pathname.replace(/\/$/, "");
@@ -567,11 +585,49 @@ function onMotion(e) {
   }
 }
 
+// ---------------- CAPTURES: keep the sound now, as many as you like ----------------
+let toastT = 0, lastSaved = "";
+function toast(t) { const e = document.getElementById("toast"); e.textContent = t; e.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("show"), 1600); }
+function doCapture(b) { cmd("capture"); buzz([12, 40, 12]); toast("CAPTURED"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 450); }
+document.getElementById("bCapture").addEventListener("click", e => doCapture(e.currentTarget));
+document.getElementById("bCap2").addEventListener("click", e => doCapture(e.currentTarget));
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function capSheet() {
+  const caps = (S && S.captures) || [];
+  let h = "<h3>CAPTURES</h3>";
+  if (!caps.length) h += "<p>Nothing captured yet. Tap <b>CAPTURE</b> whenever you like what you hear: it is kept here, named by date and time, and saved with your session.</p>";
+  else {
+    h += "<p>Tap one to glide back to it. <b>PRESET</b> keeps it for good in ORAM's presets.</p><div class='caps'>";
+    for (let i = caps.length - 1; i >= 0; i--) {
+      const parts = caps[i].split("  "), when = parts[0] || "", name = parts.slice(1).join(" ");
+      h += "<div class='cap'><div class='n' data-open='" + i + "'><b>" + esc(when.slice(5, 16)) + "</b>" + esc(name) + "</div>"
+         + "<div class='btn' data-save='" + i + "'>Preset</div><div class='btn' data-del='" + i + "'>&times;</div></div>";
+    }
+    h += "</div>";
+  }
+  h += "<div class='row'><div class='btn' data-close>Close</div><div class='btn lit' data-capnow>Capture now</div></div>";
+  sheet(h);
+}
+document.getElementById("bCapList").addEventListener("click", capSheet);
+document.getElementById("sheetCard").addEventListener("click", e => {
+  const t = e.target.closest("[data-open],[data-save],[data-del],[data-capnow]"); if (!t) return;
+  if (t.dataset.open !== undefined) { cmd("caprecall " + t.dataset.open); buzz(); toast("OPENING"); document.getElementById("sheet").classList.remove("show"); }
+  else if (t.dataset.save !== undefined) { cmd("capsave " + t.dataset.save); buzz(); toast("SAVED AS PRESET"); }
+  else if (t.dataset.del !== undefined) {
+    if (t.classList.contains("lit")) { cmd("capdelete " + t.dataset.del); buzz(); setTimeout(capSheet, 250); }
+    else { t.classList.add("lit"); t.textContent = "delete?"; }
+  }
+  else if (t.dataset.capnow !== undefined) { cmd("capture"); buzz(); toast("CAPTURED"); setTimeout(capSheet, 300); }
+});
+
 // ---------------- render ----------------
 function render() {
   if (!S) return;
   buildOnce();
   document.getElementById("name").textContent = S.name;
+  const nc = (S.captures || []).length;
+  document.getElementById("capCount").textContent = nc ? nc + " kept" : "none yet";
+  document.getElementById("capWhat").textContent = nc ? nc + " kept" : "keep this";
   document.getElementById("mIn").style.width = Math.min(100, Math.sqrt(S.in) * 110) + "%";
   document.getElementById("mOut").style.width = Math.min(100, Math.sqrt(S.out) * 110) + "%";
   document.getElementById("bHold").classList.toggle("lit", S.hold);
