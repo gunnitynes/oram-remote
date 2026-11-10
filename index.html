@@ -493,7 +493,7 @@ fader("driftTrack", "drift", "compassDrift", 0, 0);
 // phone is held when TILT starts is the centre; tap the TILT pill to re-centre.
 // A sharp shake MUTATEs.
 const TARGETS = ["compass", "blend", "jars"], TNAMES = { compass: "compass", blend: "blend", jars: "jar morph" };
-const tilt = { on: false, target: "blend", x0: null, y0: null, sx: 0, sy: 0, base: [0, 0], lastEvent: 0, lastShake: 0, attached: false, sendAt: 0 };
+const tilt = { on: false, target: "blend", x0: null, y0: null, sx: 0, sy: 0, lastEvent: 0, lastShake: 0, attached: false, sendAt: 0 };
 function sheet(html) { document.getElementById("sheetCard").innerHTML = html; document.getElementById("sheet").classList.add("show"); }
 document.getElementById("sheet").addEventListener("click", e => { if (e.target.id === "sheet" || e.target.dataset.close !== undefined) document.getElementById("sheet").classList.remove("show"); });
 
@@ -530,7 +530,6 @@ async function askSensors() {
 function setTilt(on, target) {
   tilt.on = on; if (target) tilt.target = target;
   tilt.x0 = null; tilt.sx = 0; tilt.sy = 0;
-  if (on && tilt.target === "compass") tilt.base = cPos();
   document.getElementById("bTilt").classList.toggle("lit", on);
   document.getElementById("tiltWhat").textContent = on ? TNAMES[tilt.target] : "off";
   const pill = document.getElementById("tiltPill"); pill.classList.toggle("on", on); pill.textContent = on ? "TILT · " + TNAMES[tilt.target].toUpperCase() : "TILT";
@@ -546,7 +545,7 @@ document.getElementById("bTilt").addEventListener("click", async () => {
   const k = TARGETS.indexOf(tilt.target);
   if (k + 1 < TARGETS.length) setTilt(true, TARGETS[k + 1]); else setTilt(false);
 });
-document.getElementById("tiltPill").addEventListener("click", () => { tilt.x0 = null; if (tilt.target === "compass") tilt.base = cPos(); buzz(15); });
+document.getElementById("tiltPill").addEventListener("click", () => { tilt.x0 = null; buzz(15); });
 
 function screenAngle() {
   const a = (screen.orientation && typeof screen.orientation.angle === "number") ? screen.orientation.angle : (window.orientation || 0);
@@ -570,7 +569,7 @@ function onOrient(e) {
   tilt.sendAt = now;
   if (tilt.target === "blend") sendBlend(tilt.sx, tilt.sy);
   else if (tilt.target === "jars") sendJar(tilt.sx, tilt.sy);
-  else sendCompass(tilt.base[0] + tilt.sx, tilt.base[1] + tilt.sy);   // the compass: lean it where you want to go
+  else sendCompass(tilt.sx, tilt.sy);   // the compass, like BLEND and JARS: held as at the start = the centre, lean to go
 }
 function onMotion(e) {
   if (!tilt.on) return;
