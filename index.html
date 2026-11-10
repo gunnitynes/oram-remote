@@ -230,7 +230,7 @@ function startPeer() {
     const me = new Peer(undefined, { debug: 1 });
     me.on("open", () => {
       conn = me.connect(peerId, { serialization: "json", reliable: true });
-      conn.on("data", d => { if (d && d.t === "state" && d.s) { S = d.s; okAt = performance.now(); expired = false; render(); } });
+      conn.on("data", d => { if (d && d.t === "state" && d.s) { S = d.s; okAt = performance.now(); expired = false; render(); } else if (window.onPeerData) window.onPeerData(d); });
       conn.on("close", () => { conn = null; retry(me); });
       conn.on("error", () => { conn = null; retry(me); });
     });
@@ -657,5 +657,407 @@ function frame() {
 requestAnimationFrame(frame);
 poll();
 document.addEventListener("gesturestart", e => e.preventDefault());
+</script>
+
+<style>
+#layoutPill{font:500 8.5px var(--sans);letter-spacing:.22em;color:var(--t2);border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:4px 9px;white-space:nowrap;flex:none;cursor:pointer}
+#layoutPill.custom{color:var(--ice);border-color:rgba(96,165,250,.55)}
+#custom{display:none;position:relative;min-height:0;padding:10px;gap:8px;grid-auto-flow:row}
+body.customOn #custom{display:grid;grid-row:2 / -1;grid-column:1 / -1}
+body.customOn main, body.customOn #tabs, body.customOn footer, body.customOn #chipsLand{display:none !important}
+.w{position:relative;background:var(--s1);border:1px solid rgba(255,255,255,.07);border-radius:12px;min-width:0;min-height:0;overflow:hidden;touch-action:none;display:flex;flex-direction:column}
+.w canvas{flex:1 1 0;width:100%;min-height:0;display:block}
+.w .lab{flex:none;font:500 8.5px var(--sans);letter-spacing:.2em;color:var(--t2);text-transform:uppercase;text-align:center;padding:0 6px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.w.knob .val{top:auto;bottom:24px}
+.w .val{position:absolute;left:0;right:0;top:6px;text-align:center;font:400 10px var(--mono);color:var(--t1);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+.w.btnw{align-items:center;justify-content:center;font:600 11px var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--t1);text-align:center;padding:4px;line-height:1.3}
+.w.btnw small{display:block;font:400 8px var(--mono);letter-spacing:.06em;color:var(--t3);margin-top:3px}
+.w.btnw.on{color:#07070f}
+.w.btnw.down{filter:brightness(1.35)}
+body.editing #custom{background-image:var(--cells)}
+body.editing .w{outline:1px dashed rgba(255,255,255,.25);outline-offset:-1px}
+body.editing .w.sel{outline:2px solid var(--ice)}
+.w .rz{display:none;position:absolute;right:0;bottom:0;width:30px;height:30px;background:linear-gradient(135deg,transparent 50%,rgba(96,165,250,.8) 50%);border-bottom-right-radius:12px}
+body.editing .w .rz{display:block}
+#editBar{display:none;grid-area:dock;gap:6px;padding:8px 10px 10px;background:var(--s1);border-top:1px solid var(--rule);grid-template-columns:1fr 1fr 1fr 1.2fr}
+body.editing #editBar{display:grid;grid-row:-2 / -1;grid-column:1 / -1}
+body.editing #custom{grid-row:2 / -2}
+body.editing.phone.land #custom{grid-row:2 / -1;grid-column:1 / 2}
+body.editing.phone.land #editBar{grid-row:2 / -1;grid-column:2 / 3;grid-template-columns:1fr;align-content:end;border-top:0;border-left:1px solid var(--rule)}
+#editBar .btn{height:46px}
+.card input[type=text],.card input[type=search]{width:100%;background:var(--s2);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--t1);font:400 14px var(--sans);padding:10px 12px;margin:2px 0 10px;-webkit-user-select:text;user-select:text;outline:none}
+.card input:focus{border-color:var(--ice)}
+.card .lbl{font:500 8.5px var(--sans);letter-spacing:.28em;color:var(--t3);margin:8px 0 4px;text-transform:uppercase}
+.card .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.card .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.card .pick{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 4px;border-top:1px solid var(--rule);font:400 12px var(--sans);color:var(--t1)}
+.card .pick b{font:500 8px var(--sans);letter-spacing:.2em;color:var(--t3);font-weight:500}
+.card .grp{font:600 8.5px var(--sans);letter-spacing:.3em;color:var(--acc);padding:12px 4px 4px}
+.card .list{max-height:52vh;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;margin:0 -4px}
+.sw{height:30px;border-radius:8px;border:2px solid transparent}
+.sw.on{border-color:#fff}
+.card .tgt{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--s2);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;font:400 12px var(--sans);color:var(--t1);margin-bottom:6px}
+.card .tgt span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .tgt b{font:500 8px var(--sans);letter-spacing:.2em;color:var(--ice);flex:none}
+#custom .empty{grid-column:1 / -1;grid-row:1 / -1;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--t3);font:500 10px var(--sans);letter-spacing:.24em;line-height:2;pointer-events:none}
+</style>
+<div id="custom"></div>
+<div id="editBar">
+ <div class="btn" id="eAdd">+ Add</div>
+ <div class="btn" id="eGrid">Grid</div>
+ <div class="btn" id="eName">Name</div>
+ <div class="btn lit" id="eDone">Done</div>
+</div>
+<script>
+"use strict";
+(() => {
+const COLS = ["#00c4a8", "#60a5fa", "#8b8dff", "#e0607a", "#d9a066", "#9be7dc"];
+const ACTIONS = [
+  ["transmute", "TRANSMUTE"], ["mutate", "MUTATE"], ["undo", "BACK"], ["redo", "ONWARD"], ["capture", "CAPTURE"],
+  ["newheading", "NEW HEADING"], ["hold", "HOLD"], ["mom:dissolve", "DISSOLVE (hold)"], ["mom:flood", "FLOOD (hold)"],
+  ["home", "COMPASS HOME"], ["jar 0", "JAR 1"], ["jar 1", "JAR 2"], ["jar 2", "JAR 3"], ["jar 3", "JAR 4"]];
+const SIZES = { knob: [2, 2], fader: [1, 3], xy: [3, 3], button: [2, 1] };
+let L = null, editing = false, params = null, sel = -1;
+const app = document.getElementById("app"), box = document.getElementById("custom");
+app.appendChild(box); app.appendChild(document.getElementById("editBar"));
+
+// ---------------- the request channel (HTTP to the plugin, or the WebRTC channel) ----------------
+let seq = 0; const waiting = {};
+function request(kind, extra) {
+  const msg = Object.assign({ kind }, extra || {});
+  if (peerId) return new Promise((res, rej) => {
+    if (!conn || !conn.open) return rej("offline");
+    const id = ++seq; waiting[id] = { parts: [], res };
+    conn.send(Object.assign({ t: "req", id }, msg));
+    setTimeout(() => { if (waiting[id]) { delete waiting[id]; rej("timeout"); } }, 10000);
+  });
+  return fetch(base + "/req", { method: "POST", body: JSON.stringify(msg) }).then(r => r.json());
+}
+window.onPeerData = d => {
+  if (!d || d.t !== "res" || !waiting[d.id]) return;
+  const w = waiting[d.id]; w.parts[d.i] = d.d;
+  let got = 0; for (const p of w.parts) if (p !== undefined) got++;
+  if (got === d.n) { delete waiting[d.id]; try { w.res(JSON.parse(w.parts.join(""))); } catch (e) {} }
+};
+async function loadParams() {
+  try { const r = await request("params"); if (r.ok) params = r.data; } catch (e) {}
+  return params || [];
+}
+const pinfo = id => (params || []).find(p => p.id === id);
+
+// ---------------- the header pill and the LAYOUT menu ----------------
+const pill = document.createElement("div"); pill.id = "layoutPill"; pill.textContent = "DEFAULT ▾";
+document.querySelector("header").insertBefore(pill, document.getElementById("tiltPill"));
+pill.addEventListener("click", layoutMenu);
+async function layoutMenu() {
+  buzz();
+  let names = [];
+  try { const r = await request("layouts"); if (r.ok) names = r.data; } catch (e) {}
+  let h = "<h3>CONTROLLERS</h3><div class='list'>";
+  h += "<div class='pick' data-open=''>DEFAULT <b>" + (L ? "" : "OPEN") + "</b></div>";
+  for (const n of names) h += "<div class='pick' data-open='" + esc(n) + "'>" + esc(n) + " <b>" + (L && L.name === n ? "OPEN" : "") + "</b></div>";
+  h += "</div><div class='row'><div class='btn' data-close>Close</div><div class='btn lit' data-new>New controller</div></div>";
+  if (L) h += "<div class='row'><div class='btn' data-edit>Edit</div><div class='btn' data-dup>Duplicate</div><div class='btn' data-del>Delete</div></div>";
+  sheet(h);
+}
+document.getElementById("sheetCard").addEventListener("click", async e => {
+  const t = e.target.closest("[data-open],[data-new],[data-edit],[data-dup],[data-del],[data-pickt],[data-act],[data-col],[data-mode],[data-wdel],[data-wok],[data-tgt],[data-tgt2],[data-gridok],[data-add],[data-nameok]");
+  if (!t) return;
+  const close = () => document.getElementById("sheet").classList.remove("show");
+  if (t.dataset.open !== undefined) { close(); if (t.dataset.open === "") useDefault(); else openLayout(t.dataset.open); }
+  else if (t.dataset.new !== undefined) nameSheet(true);
+  else if (t.dataset.edit !== undefined) { close(); startEdit(); }
+  else if (t.dataset.dup !== undefined) { const copy = JSON.parse(JSON.stringify(L)); copy.name = L.name + " copy"; L = copy; await save(); close(); render(); }
+  else if (t.dataset.del !== undefined) {
+    if (!t.classList.contains("lit")) { t.classList.add("lit"); t.textContent = "Delete?"; return; }
+    try { await request("dellayout", { name: L.name }); } catch (e) {}
+    close(); useDefault(); toast("DELETED");
+  }
+  else if (t.dataset.add !== undefined) { close(); addWidget(t.dataset.add); }
+  else if (t.dataset.nameok !== undefined) {
+    const v = (document.getElementById("nmIn").value || "").trim(); if (!v) return;
+    if (t.dataset.nameok === "new") { const ph = document.body.classList.contains("phone"), land = document.body.classList.contains("land");
+      L = { name: v, cols: ph ? (land ? 8 : 4) : 8, rows: ph ? (land ? 4 : 6) : 6, w: [] }; close(); render(); startEdit(); }
+    else { const old = L.name; L.name = v; await save(); if (old !== v) try { await request("dellayout", { name: old }); } catch (e) {} close(); render(); }
+  }
+  else if (t.dataset.gridok !== undefined) {
+    L.cols = Math.max(2, Math.min(12, parseInt(document.getElementById("gC").value) || L.cols));
+    L.rows = Math.max(2, Math.min(14, parseInt(document.getElementById("gR").value) || L.rows));
+    for (const w of L.w) { w.w = Math.min(w.w, L.cols); w.h = Math.min(w.h, L.rows); w.x = Math.min(w.x, L.cols - w.w); w.y = Math.min(w.y, L.rows - w.h); }
+    close(); render();
+  }
+  // ---- inside a control's settings
+  else if (t.dataset.tgt !== undefined) targetSheet(sel, 0);
+  else if (t.dataset.tgt2 !== undefined) targetSheet(sel, 1);
+  else if (t.dataset.pickt !== undefined) { const [i, k] = t.dataset.slot.split(":").map(Number); const w = L.w[i]; if (k === 1) w.target2 = t.dataset.pickt; else w.target = t.dataset.pickt; w.label = ""; render(); widgetSheet(i); }
+  else if (t.dataset.col !== undefined) { L.w[sel].color = +t.dataset.col; render(); widgetSheet(sel); }
+  else if (t.dataset.mode !== undefined) { L.w[sel].mode = t.dataset.mode; widgetSheet(sel); }
+  else if (t.dataset.wdel !== undefined) { L.w.splice(sel, 1); sel = -1; close(); render(); }
+  else if (t.dataset.wok !== undefined) { const nm = document.getElementById("wlIn"); if (nm) L.w[sel].label = nm.value.trim(); close(); render(); }
+});
+
+function useDefault() { L = null; editing = false; document.body.classList.remove("customOn", "editing"); pill.textContent = "DEFAULT ▾"; pill.classList.remove("custom"); }
+async function openLayout(name) {
+  try {
+    const r = await request("getlayout", { name });
+    if (!r.ok) { toast("COULD NOT OPEN"); return; }
+    L = Object.assign({ cols: 4, rows: 6, w: [] }, r.data, { name });
+    if (!params) await loadParams();
+    render();
+  } catch (e) { toast("COULD NOT OPEN"); }
+}
+async function save() {
+  if (!L) return;
+  const { name, ...design } = L;
+  try { const r = await request("putlayout", { name, layout: design }); if (r.ok) { L.name = r.data; toast("SAVED"); } else toast("COULD NOT SAVE"); } catch (e) { toast("COULD NOT SAVE"); }
+}
+function nameSheet(isNew) {
+  sheet("<h3>" + (isNew ? "NEW CONTROLLER" : "NAME") + "</h3><div class='lbl'>Name</div><input type='text' id='nmIn' maxlength='40' value='" + esc(isNew ? "" : L.name) + "' placeholder='My controller'>"
+    + "<div class='row'><div class='btn' data-close>Cancel</div><div class='btn lit' data-nameok='" + (isNew ? "new" : "rename") + "'>" + (isNew ? "Create" : "Rename") + "</div></div>");
+  setTimeout(() => { const i = document.getElementById("nmIn"); if (i) i.focus(); }, 50);
+}
+
+// ---------------- rendering a design ----------------
+const valOf = id => { const v = S && S.vals && S.vals[id]; return v ? v : null; };
+const nv = id => val("n:" + id, valOf(id) ? valOf(id)[0] : (pinfo(id) ? pinfo(id).def : 0));
+function nameOf(t) {
+  if (!t) return "—";
+  if (t.startsWith("act:")) { const a = ACTIONS.find(a => a[0] === t.slice(4)); return a ? a[1] : t.slice(4).toUpperCase(); }
+  const v = valOf(t); if (v) return v[2];
+  const p = pinfo(t); return p ? p.name : t;
+}
+function sendN(id, v) {
+  v = Math.max(0, Math.min(1, v));
+  hold("n:" + id, v, 500);
+  pendingCmds = pendingCmds.filter(c => !c.startsWith("setn " + id + " "));
+  cmd("setn " + id + " " + v.toFixed(4));
+}
+function render() {
+  document.body.classList.toggle("customOn", !!L);
+  if (!L) return;
+  pill.textContent = L.name.toUpperCase() + " ▾"; pill.classList.add("custom");
+  box.style.gridTemplateColumns = "repeat(" + L.cols + ",minmax(0,1fr))";
+  box.style.gridTemplateRows = "repeat(" + L.rows + ",minmax(0,1fr))";
+  box.innerHTML = "";
+  if (!L.w.length) { const e = document.createElement("div"); e.className = "empty"; e.innerHTML = editing ? "EMPTY<br>TAP + ADD TO PLACE A CONTROL" : "EMPTY<br>OPEN THE LAYOUT MENU AND TAP EDIT"; box.appendChild(e); }
+  L.w.forEach((w, i) => {
+    const d = document.createElement("div");
+    d.className = "w " + w.type + (w.type === "button" ? " btnw" : "") + (editing && i === sel ? " sel" : "");
+    d.style.gridColumn = (w.x + 1) + " / span " + w.w; d.style.gridRow = (w.y + 1) + " / span " + w.h;
+    d.dataset.i = i;
+    const col = COLS[w.color || 0];
+    if (w.type === "button") d.innerHTML = esc(w.label || nameOf(w.target)) + "<small></small>";
+    else {
+      d.innerHTML = "<div class='val'></div><canvas></canvas><div class='lab'></div>";
+      d.querySelector(".lab").textContent = w.label || (w.type === "xy" ? nameOf(w.target) + " / " + nameOf(w.target2) : nameOf(w.target));
+      d.querySelector(".lab").style.color = col;
+    }
+    d.insertAdjacentHTML("beforeend", "<div class='rz'></div>");
+    box.appendChild(d);
+    hookWidget(d, w, i);
+  });
+  // cells, drawn behind the controls while editing
+  box.style.setProperty("--cells", "linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 100% calc((100% - 20px) / " + L.rows + "), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / calc((100% - 20px) / " + L.cols + ") 100%");
+  watch();
+}
+function watch() {
+  if (!L) return;
+  const ids = new Set();
+  for (const w of L.w) for (const t of [w.target, w.target2]) if (t && !t.startsWith("act:")) ids.add(t);
+  if (ids.size) cmd("watch " + [...ids].join(" "));
+}
+setInterval(watch, 4000);
+
+function drawKnob(cv, v, col, bip) {
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  const R = Math.max(8, Math.min(r.width, r.height) / 2 - 10), cx = r.width / 2, cy = r.height / 2 + 4;
+  const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25, av = a0 + (a1 - a0) * v, am = bip ? (a0 + a1) / 2 : a0;
+  g.lineCap = "round";
+  g.beginPath(); g.arc(cx, cy, R, a0, a1); g.strokeStyle = "rgba(255,255,255,.08)"; g.lineWidth = Math.max(3, R * 0.09); g.stroke();
+  g.beginPath(); g.arc(cx, cy, R, Math.min(am, av), Math.max(am, av)); g.strokeStyle = col; g.stroke();
+  g.beginPath(); g.arc(cx + Math.cos(av) * R, cy + Math.sin(av) * R, Math.max(3, R * 0.1), 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill();
+  g.beginPath(); g.arc(cx, cy, 2.5, 0, Math.PI * 2); g.fillStyle = col; g.fill();
+}
+function drawFader(cv, v, col, vertical) {
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  const pad = 10;
+  if (vertical) {
+    const x = r.width / 2, y0 = r.height - pad, y1 = pad + 14, yv = y0 + (y1 - y0) * v, tw = Math.min(26, r.width * 0.5);
+    g.fillStyle = "rgba(255,255,255,.05)"; g.beginPath(); g.roundRect(x - tw / 2, y1, tw, y0 - y1, tw / 2); g.fill();
+    g.fillStyle = col; g.globalAlpha = 0.85; g.beginPath(); g.roundRect(x - tw / 2, yv, tw, y0 - yv, tw / 2); g.fill(); g.globalAlpha = 1;
+    g.fillStyle = "#fff"; g.fillRect(x - tw / 2 - 3, yv - 1.5, tw + 6, 3);
+  } else {
+    const y = r.height / 2 + 6, x0 = pad, x1 = r.width - pad, xv = x0 + (x1 - x0) * v, th = Math.min(22, r.height * 0.4);
+    g.fillStyle = "rgba(255,255,255,.05)"; g.beginPath(); g.roundRect(x0, y - th / 2, x1 - x0, th, th / 2); g.fill();
+    g.fillStyle = col; g.globalAlpha = 0.85; g.beginPath(); g.roundRect(x0, y - th / 2, xv - x0, th, th / 2); g.fill(); g.globalAlpha = 1;
+    g.fillStyle = "#fff"; g.fillRect(xv - 1.5, y - th / 2 - 3, 3, th + 6);
+  }
+}
+function drawXY(cv, vx, vy, col) {
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  const p = 14, w = r.width - 2 * p, h = r.height - 2 * p - 10, x = p + vx * w, y = p + 10 + (1 - vy) * h;
+  g.strokeStyle = "rgba(255,255,255,.06)"; g.lineWidth = 1;
+  for (let k = 1; k < 4; k++) { g.beginPath(); g.moveTo(p + w * k / 4, p + 10); g.lineTo(p + w * k / 4, p + 10 + h); g.moveTo(p, p + 10 + h * k / 4); g.lineTo(p + w, p + 10 + h * k / 4); g.stroke(); }
+  g.strokeStyle = col; g.globalAlpha = 0.35; g.beginPath(); g.moveTo(x, p + 10); g.lineTo(x, p + 10 + h); g.moveTo(p, y); g.lineTo(p + w, y); g.stroke(); g.globalAlpha = 1;
+  g.beginPath(); g.arc(x, y, 14, 0, Math.PI * 2); g.fillStyle = col + "33"; g.fill();
+  g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fillStyle = col; g.fill();
+}
+const bipolar = id => { const p = pinfo(id); return p && p.kind === "f" && /^(shape|m[A-Z]|compass[XY]|blend|warp[XY]|cat)/.test(id); };
+function frame() {
+  if (L && document.body.classList.contains("customOn")) {
+    box.querySelectorAll(".w").forEach(d => {
+      const w = L.w[+d.dataset.i]; if (!w) return;
+      const col = COLS[w.color || 0], cv = d.querySelector("canvas"), vl = d.querySelector(".val");
+      if (w.type === "knob" && cv) { const v = nv(w.target); drawKnob(cv, v, col, bipolar(w.target)); vl.textContent = valOf(w.target) ? valOf(w.target)[1] : ""; }
+      else if (w.type === "fader" && cv) { drawFader(cv, nv(w.target), col, w.h >= w.w); vl.textContent = valOf(w.target) ? valOf(w.target)[1] : ""; }
+      else if (w.type === "xy" && cv) { drawXY(cv, nv(w.target), w.target2 ? nv(w.target2) : 0.5, col); vl.textContent = (valOf(w.target) ? valOf(w.target)[1] : "") + (w.target2 && valOf(w.target2) ? "  ·  " + valOf(w.target2)[1] : ""); }
+      else if (w.type === "button") {
+        const on = w.target && !w.target.startsWith("act:") && nv(w.target) > 0.5;
+        d.classList.toggle("on", on); d.style.background = on ? col : ""; d.style.borderColor = col + (on ? "" : "66");
+        const sm = d.querySelector("small"); if (sm) sm.textContent = w.target && w.target.startsWith("act:") ? "" : (valOf(w.target) ? valOf(w.target)[1] : "");
+      }
+    });
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------------- playing a design ----------------
+function hookWidget(d, w, i) {
+  let start = null, moved = false, startV = 0, startV2 = 0, mode = "";
+  d.addEventListener("pointerdown", e => {
+    try { d.setPointerCapture(e.pointerId); } catch (x) {}
+    moved = false; start = { x: e.clientX, y: e.clientY, w: { ...w } };
+    if (editing) { mode = e.target.classList.contains("rz") ? "resize" : "move"; return; }
+    mode = "play";
+    if (w.type === "button") return pressButton(w, d, true);
+    if (!w.target) return;
+    startV = nv(w.target); startV2 = w.target2 ? nv(w.target2) : 0;
+    if (w.type !== "knob") playAt(e, d, w);
+    // double-tap: back to the parameter's own default
+    const now = performance.now();
+    if (now - (d._tap || 0) < 330) { const p = pinfo(w.target); if (p) sendN(w.target, p.def); if (w.target2 && pinfo(w.target2)) sendN(w.target2, pinfo(w.target2).def); buzz(); d._tap = 0; mode = ""; return; }
+    d._tap = now;
+  });
+  d.addEventListener("pointermove", e => {
+    if (!start) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+    if (mode === "play" && w.target) {
+      if (w.type === "knob") sendN(w.target, startV + (dx - dy) / 220);   // up or right turns it up
+      else if (w.type !== "button") playAt(e, d, w);
+    } else if (mode === "move" || mode === "resize") {
+      const r = box.getBoundingClientRect(), cw = (r.width - 20) / L.cols, ch = (r.height - 20) / L.rows;
+      const cx = Math.round(dx / cw), cy = Math.round(dy / ch);
+      if (mode === "move") { w.x = Math.max(0, Math.min(L.cols - w.w, start.w.x + cx)); w.y = Math.max(0, Math.min(L.rows - w.h, start.w.y + cy)); }
+      else { w.w = Math.max(1, Math.min(L.cols - w.x, start.w.w + cx)); w.h = Math.max(1, Math.min(L.rows - w.y, start.w.h + cy)); }
+      d.style.gridColumn = (w.x + 1) + " / span " + w.w; d.style.gridRow = (w.y + 1) + " / span " + w.h;
+    }
+  });
+  const up = () => {
+    if (!start) return;
+    if (editing && !moved) { sel = i; render(); widgetSheet(i); }
+    else if (editing) { sel = i; render(); }
+    if (mode === "play" && w.type === "button") pressButton(w, d, false);
+    start = null; mode = "";
+  };
+  d.addEventListener("pointerup", up); d.addEventListener("pointercancel", up);
+}
+function playAt(e, d, w) {
+  const cv = d.querySelector("canvas"); if (!cv) return;
+  const r = cv.getBoundingClientRect();
+  if (w.type === "fader") {
+    const v = w.h >= w.w ? 1 - (e.clientY - r.top - 24) / (r.height - 34) : (e.clientX - r.left - 10) / (r.width - 20);
+    sendN(w.target, v);
+  } else if (w.type === "xy") {
+    const p = 14, vx = (e.clientX - r.left - p) / (r.width - 2 * p), vy = 1 - (e.clientY - r.top - p - 10) / (r.height - 2 * p - 10);
+    sendN(w.target, vx); if (w.target2) sendN(w.target2, vy);
+  }
+}
+function pressButton(w, d, down) {
+  if (!w.target) return;
+  d.classList.toggle("down", down);
+  if (w.target.startsWith("act:")) {
+    const a = w.target.slice(4);
+    if (a.startsWith("mom:")) cmd(a.slice(4) + (down ? " 1" : " 0"));
+    else if (down) { cmd(a); if (a === "capture") toast("CAPTURED"); }
+    if (down) buzz();
+    return;
+  }
+  const mode = w.mode || "toggle";
+  if (mode === "momentary") sendN(w.target, down ? 1 : 0);
+  else if (down) sendN(w.target, nv(w.target) > 0.5 ? 0 : 1);
+  if (down) buzz();
+}
+
+// ---------------- editing ----------------
+function startEdit() { editing = true; sel = -1; document.body.classList.add("editing"); render(); }
+document.getElementById("eDone").addEventListener("click", async () => { editing = false; sel = -1; document.body.classList.remove("editing"); render(); await save(); });
+document.getElementById("eName").addEventListener("click", () => nameSheet(false));
+document.getElementById("eGrid").addEventListener("click", () => sheet("<h3>GRID</h3><p>How many cells across and down. Controls snap to them; the grid stretches to fit any screen.</p>"
+  + "<div class='grid2'><div><div class='lbl'>Across</div><input type='text' inputmode='numeric' id='gC' value='" + L.cols + "'></div><div><div class='lbl'>Down</div><input type='text' inputmode='numeric' id='gR' value='" + L.rows + "'></div></div>"
+  + "<div class='row'><div class='btn' data-close>Cancel</div><div class='btn lit' data-gridok>Set</div></div>"));
+document.getElementById("eAdd").addEventListener("click", () => sheet("<h3>ADD A CONTROL</h3><div class='grid2'>"
+  + "<div class='btn' data-add='knob'>Knob<small>turn: drag up</small></div><div class='btn' data-add='fader'>Fader<small>slide</small></div>"
+  + "<div class='btn' data-add='xy'>XY pad<small>two at once</small></div><div class='btn' data-add='button'>Button<small>tap or hold</small></div>"
+  + "</div><div class='row'><div class='btn' data-close>Cancel</div></div>"));
+function freeSpot(w, h) {
+  const used = (x, y) => L.w.some(o => x < o.x + o.w && x + w > o.x && y < o.y + o.h && y + h > o.y);
+  for (let y = 0; y + h <= L.rows; y++) for (let x = 0; x + w <= L.cols; x++) if (!used(x, y)) return [x, y];
+  return [0, 0];
+}
+async function addWidget(type) {
+  if (!params) await loadParams();
+  let [w, h] = SIZES[type]; w = Math.min(w, L.cols); h = Math.min(h, L.rows);
+  const [x, y] = freeSpot(w, h);
+  L.w.push({ type, x, y, w, h, target: "", color: L.w.length % COLS.length });
+  sel = L.w.length - 1; render();
+  targetSheet(sel, 0);
+}
+function widgetSheet(i) {
+  sel = i; const w = L.w[i];
+  let h = "<h3>" + w.type.toUpperCase() + "</h3>";
+  h += "<div class='lbl'>" + (w.type === "xy" ? "Left – right" : "Controls") + "</div><div class='tgt' data-tgt><span>" + esc(nameOf(w.target)) + "</span><b>CHOOSE</b></div>";
+  if (w.type === "xy") h += "<div class='lbl'>Down – up</div><div class='tgt' data-tgt2><span>" + esc(nameOf(w.target2)) + "</span><b>CHOOSE</b></div>";
+  if (w.type === "button" && w.target && !w.target.startsWith("act:"))
+    h += "<div class='lbl'>Button</div><div class='grid2'><div class='btn" + ((w.mode || "toggle") === "toggle" ? " lit" : "") + "' data-mode='toggle'>Toggle</div><div class='btn" + (w.mode === "momentary" ? " lit" : "") + "' data-mode='momentary'>While held</div></div>";
+  h += "<div class='lbl'>Label (empty = the parameter's own name)</div><input type='text' id='wlIn' maxlength='28' value='" + esc(w.label || "") + "'>";
+  h += "<div class='lbl'>Colour</div><div class='grid4' style='grid-template-columns:repeat(6,1fr)'>" + COLS.map((c, k) => "<div class='sw" + ((w.color || 0) === k ? " on" : "") + "' style='background:" + c + "' data-col='" + k + "'></div>").join("") + "</div>";
+  h += "<div class='row'><div class='btn' data-wdel>Remove</div><div class='btn lit' data-wok>Done</div></div>";
+  sheet(h);
+}
+async function targetSheet(i, k) {
+  await loadParams();   // names follow the machines in the slots right now
+  const w = L.w[i], buttons = w.type === "button";
+  let h = "<h3>" + (k ? "DOWN – UP" : buttons ? "WHAT IT DOES" : "WHAT IT CONTROLS") + "</h3><input type='search' id='tq' placeholder='Search: drive, echo, level, pin…'><div class='list' id='tl'></div>"
+    + "<div class='row'><div class='btn' data-close>Cancel</div></div>";
+  sheet(h);
+  const list = document.getElementById("tl"), q = document.getElementById("tq");
+  const fill = () => {
+    const f = q.value.trim().toUpperCase();
+    let out = "", grp = "";
+    const row = (t, name, tag) => "<div class='pick' data-pickt='" + esc(t) + "' data-slot='" + i + ":" + k + "'>" + esc(name) + " <b>" + esc(tag) + "</b></div>";
+    if (buttons && !k) { const acts = ACTIONS.filter(a => !f || a[1].includes(f)); if (acts.length) { out += "<div class='grp'>ACTIONS</div>"; for (const a of acts) out += row("act:" + a[0], a[1], ""); } }
+    // each section once, in the order it first appears
+    const order = []; for (const p of params || []) if (!order.includes(p.group)) order.push(p.group);
+    const sorted = (params || []).slice().sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+    for (const p of sorted) {
+      if (buttons && !k && p.kind !== "b") continue;               // a button switches things on and off
+      if (!buttons && p.kind === "b") continue;
+      if (f && !(p.name.toUpperCase().includes(f) || p.group.includes(f))) continue;
+      if (p.group !== grp) { grp = p.group; out += "<div class='grp'>" + esc(grp) + "</div>"; }
+      out += row(p.id, p.name, p.kind === "c" ? "CHOICE" : "");
+    }
+    list.innerHTML = out || "<p>Nothing by that name.</p>";
+  };
+  q.addEventListener("input", fill); fill();
+}
+})();
 </script>
 </body></html>
